@@ -1,30 +1,17 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
+import { createRouter, createWebHistory } from 'vue-router';
+
+const routes = [
+  { path: '/', redirect: '/insights' },
+  { path: '/insights', name: 'Insights', component: () => import('../views/InsightsView.vue') },
+  { path: '/parking', name: 'ParkingMap', component: () => import('../views/ParkingMapView.vue') },
+  { path: '/forecast', name: 'ParkingForecast', component: () => import('../views/ParkingForecastView.vue') },
+  { path: '/history', name: 'ParkingHistory', component: () => import('../views/ParkingHistoryView.vue') },
+  { path: '/green', name: 'GreenOptions', component: () => import('../views/GreenOptionsView.vue') },
+];
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
-  routes: [
-    {
-      path: '/',
-      name: 'home',
-      component: HomeView,
-    },
-    {
-      path: '/parking',
-      name: 'parking',
-      component: () => import('../views/ParkingView.vue'),
-    },
-    {
-      path: '/insights',
-      name: 'insights',
-      component: () => import('../views/DataInsightsView.vue'),
-    },
-    {
-      path: '/eco',
-      name: 'eco',
-      component: () => import('../views/EcoCommuteView.vue'),
-    },
-  ],
-})
+  history: createWebHistory(),
+  routes,
+});
 
-export default router
+export default router;

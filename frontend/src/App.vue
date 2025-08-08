@@ -1,53 +1,12 @@
 <template>
-  <div id="app">
-    <header>
-      <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/parking">Parking Finder</RouterLink>
-        <RouterLink to="/insights">Data Insights</RouterLink>
-        <RouterLink to="/eco">Eco Commute</RouterLink>
-      </nav>
-    </header>
-    <main>
-      <RouterView />
-    </main>
-  </div>
+  <header style="padding:12px; border-bottom:1px solid #eee; display:flex; gap:12px;">
+    <router-link to="/insights">Data Insights</router-link>
+    <router-link to="/parking">Parking Map</router-link>
+    <router-link to="/forecast">Forecast</router-link>
+    <router-link to="/history">History</router-link>
+    <router-link to="/green">Green Options</router-link>
+  </header>
+  <main style="padding:16px;">
+    <router-view />
+  </main>
 </template>
-
-<script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
-</script>
-
-<style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  color: #2c3e50;
-}
-
-nav {
-  padding: 20px;
-  background: #f8f9fa;
-  display: flex;
-  gap: 20px;
-}
-
-nav a {
-  text-decoration: none;
-  color: #007bff;
-  padding: 8px 16px;
-  border-radius: 4px;
-}
-
-nav a:hover {
-  background: #e9ecef;
-}
-
-nav a.router-link-active {
-  background: #007bff;
-  color: white;
-}
-
-main {
-  padding: 20px;
-}
-</style>
