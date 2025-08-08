@@ -1,0 +1,4 @@
+[
+  {"place":"Lonsdale St","inMins":30,"expectedAvailable":6,"confidence":0.72},
+  {"place":"Queen St","inMins":120,"expectedAvailable":3,"confidence":0.64}
+]

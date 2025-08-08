@@ -1,0 +1,16 @@
+{
+  "yearlyCarOwnership":[
+    {"year":2019,"value":100},
+    {"year":2020,"value":105},
+    {"year":2021,"value":110},
+    {"year":2022,"value":118},
+    {"year":2023,"value":126}
+  ],
+  "populationVsCongestion":[
+    {"year": 2019, "population": 5070000, "congestion": 62},
+    {"year": 2020, "population": 5120000, "congestion": 55},
+    {"year": 2021, "population": 5200000, "congestion": 58},
+    {"year": 2022, "population": 5330000, "congestion": 66},
+    {"year": 2023, "population": 5450000, "congestion": 71}
+  ]
+}

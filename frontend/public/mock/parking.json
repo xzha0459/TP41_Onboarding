@@ -1,0 +1,6 @@
+[
+  {"id":1,"name":"Lonsdale St Car Park","lat":-37.8122,"lng":144.9623,"total":200},
+  {"id":2,"name":"Queen St Parking","lat":-37.8145,"lng":144.9588,"total":120},
+  {"id":3,"name":"QV Car Park","lat":-37.8107,"lng":144.9651,"total":150},
+  {"id":4,"name":"Melbourne Central Car Park","lat":-37.8095,"lng":144.9632,"total":300}
+]
