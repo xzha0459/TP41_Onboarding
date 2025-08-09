@@ -2,7 +2,7 @@ from django.db import models
 
 # Create your models here.
 
-class ParkingSpot(models.Model):
+class Parking(models.Model):
     kerbside_id = models.CharField(max_length=50)
     zone_number = models.CharField(max_length=20)
     status_description = models.CharField(max_length=50)
