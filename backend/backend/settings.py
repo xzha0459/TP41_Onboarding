@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "parking",
     "drf_spectacular",
+    "insights",
 ]
 
 MIDDLEWARE = [
@@ -100,11 +101,12 @@ WSGI_APPLICATION = "backend.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
-        "NAME": os.getenv("DB_NAME"),
-        "USER": os.getenv("DB_USER"),
-        "PASSWORD": os.getenv("DB_PWD"),
-        "HOST": os.getenv("DB_HOST"),
-        "PORT": os.getenv("DB_PORT"),
+        "NAME": "onboarding",
+        "USER": "onb_user",
+        "PASSWORD": "onb_pass",
+        "HOST": "127.0.0.1",
+        "PORT": "3306",
+        "OPTIONS": {"init_command": "SET sql_mode='STRICT_TRANS_TABLES'"},
     }
 }
 
