@@ -154,7 +154,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWS_CREDENTIALS = True
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Parking API',
-    'DESCRIPTION': 'API documentation for ParkingSpot endpoints',
+    'TITLE': 'Onboarding API',
+    'DESCRIPTION': 'API documentation for Onboarding project',
     'VERSION': '1.0.0',
 }
