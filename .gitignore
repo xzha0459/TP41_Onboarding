@@ -32,3 +32,5 @@ coverage
 .env
 db.sqlite3
 __pycache__/
+.vite
+.vscode
