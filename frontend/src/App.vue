@@ -3,7 +3,6 @@
     <div class="container row" style="justify-content:space-between;">
       <div class="row" style="gap:10px">
         <strong>Melbourne Parking</strong>
-        <span class="muted">| v0.1</span>
       </div>
       <nav class="row" style="gap:14px">
         <router-link to="/find">Find Parking</router-link>
