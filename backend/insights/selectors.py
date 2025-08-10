@@ -1,16 +1,44 @@
+# insights/selectors.py
 from typing import List, Dict, Optional
-from .models import RegionBoundary, RegionalPopulation, MotorVehicleCensus
-from math import sqrt
+from django.db.models import Sum
+from .models import DimRegion, FactAbsPopulation, FactAbsVehicleCensus
 
-def getRegionById(regionId: str) -> Optional[RegionBoundary]:
+__all__ = [
+    "getRegionById",
+    "getSeriesPopulation",
+    "getSeriesVehiclesByState",
+    "yearlyPercentageChange",
+    "averageAnnualGrowthRate",
+    "valuesPer1000",
+]
+
+def getRegionById(regionId: str) -> Optional[DimRegion]:
+    """
+    Backward-compatible resolver:
+    - first try by region_id (numeric as str is OK)
+    - then try by region_code (e.g., 'VIC')
+    """
+    # try region_id
     try:
-        return RegionBoundary.objects.get(pk=regionId)
-    except RegionBoundary.DoesNotExist:
+        return DimRegion.objects.get(region_id=int(regionId))
+    except (DimRegion.DoesNotExist, ValueError, TypeError):
+        pass
+
+    # try region_code
+    try:
+        return DimRegion.objects.get(region_code=str(regionId))
+    except DimRegion.DoesNotExist:
         return None
 
-def getSeriesPopulation(region: RegionBoundary, startYear: Optional[int]=None, endYear: Optional[int]=None) -> List[Dict]:
-    qs = RegionalPopulation.objects.filter(region=region).values("year", "population").order_by("year")
-    data = [{"year": r["year"], "value": r["population"]} for r in qs]
+def getSeriesPopulation(region: DimRegion, startYear: Optional[int]=None, endYear: Optional[int]=None) -> List[Dict]:
+    qs = (
+        FactAbsPopulation.objects
+        .filter(region=region)
+        .values("ref_year")
+        .annotate(population=Sum("population_total"))
+        .order_by("ref_year")
+    )
+    data = [{"year": r["ref_year"], "value": int(r["population"] or 0)} for r in qs]
     if startYear is not None:
         data = [x for x in data if x["year"] >= startYear]
     if endYear is not None:
@@ -18,28 +46,43 @@ def getSeriesPopulation(region: RegionBoundary, startYear: Optional[int]=None, e
     return data
 
 def getSeriesVehiclesByState(stateCode: str, startYear: Optional[int]=None, endYear: Optional[int]=None) -> List[Dict]:
-    qs = MotorVehicleCensus.objects.filter(state=stateCode).values("year", "vehicleCount").order_by("year")
-    data = [{"year": r["year"], "value": r["vehicleCount"]} for r in qs]
+    """
+    Treats stateCode as a region_code in DimRegion (e.g., 'VIC').
+    If your data uses another code for VIC, adjust the lookup below.
+    """
+    try:
+        region = DimRegion.objects.get(region_code=stateCode)
+    except DimRegion.DoesNotExist:
+        return []
+
+    qs = (
+        FactAbsVehicleCensus.objects
+        .filter(region=region)
+        .values("ref_year")
+        .annotate(total=Sum("vehicle_count"))
+        .order_by("ref_year")
+    )
+    data = [{"year": r["ref_year"], "value": int(r["total"] or 0)} for r in qs]
     if startYear is not None:
         data = [x for x in data if x["year"] >= startYear]
     if endYear is not None:
         data = [x for x in data if x["year"] <= endYear]
     return data
 
-def yearlyPercentageChange(data: List[Dict]) -> List[Dict]:
-    result = []
-    for i in range(1, len(data)):
-        prev = data[i-1]["value"]
-        cur = data[i]["value"]
+def yearlyPercentageChange(series: List[Dict]) -> List[Dict]:
+    out = []
+    for i in range(1, len(series)):
+        prev = series[i-1]["value"]
+        curr = series[i]["value"]
         if prev:
-            result.append({"year": data[i]["year"], "percentage": (cur - prev) / prev * 100.0})
-    return result
+            out.append({"year": series[i]["year"], "value": ((curr - prev) / prev) * 100.0})
+    return out
 
-def averageAnnualGrowthRate(data: List[Dict]) -> Optional[float]:
-    if len(data) < 2:
+def averageAnnualGrowthRate(series: List[Dict]) -> Optional[float]:
+    if not series or len(series) < 2:
         return None
-    start = data[0]; end = data[-1]
-    n = end["year"] - start["year"]
+    start, end = series[0], series[-1]
+    n = (end["year"] - start["year"])
     if n <= 0 or start["value"] <= 0:
         return None
     return ((end["value"] / start["value"]) ** (1.0 / n) - 1.0) * 100.0

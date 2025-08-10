@@ -1,38 +1,56 @@
 from django.db import models
 
-class RegionBoundary(models.Model):
-    regionId = models.CharField(max_length=32, primary_key=True)
-    stateCode = models.CharField(max_length=8, db_index=True)  
-    name = models.CharField(max_length=128)
-    geometry = models.TextField(blank=True)  
-
-    def __str__(self):
-        return f"{self.regionId} {self.name}"
-
-class RegionalPopulation(models.Model):
-    region = models.ForeignKey(RegionBoundary, on_delete=models.CASCADE, related_name="pop")
-    sa2 = models.CharField(max_length=32)              
-    year = models.IntegerField()
-    population = models.BigIntegerField()
-    area = models.FloatField(null=True, blank=True)    
-    density = models.FloatField(null=True, blank=True) 
+class DimRegion(models.Model):
+    region_id = models.BigIntegerField(primary_key=True)
+    region_code = models.CharField(max_length=64, blank=True, null=True)
+    region_name = models.CharField(max_length=128)
+    region_type = models.CharField(max_length=32)  # e.g., STATE, LGA, SA2
+    parent_region_id = models.BigIntegerField(blank=True, null=True)
 
     class Meta:
-        unique_together = ("region", "year")
-        indexes = [
-            models.Index(fields=["year", "region"]),
-            models.Index(fields=["sa2"]),
-        ]
+        db_table = 'dim_region'
+        managed = False
 
-class MotorVehicleCensus(models.Model):
-    state = models.CharField(max_length=8)     
-    year = models.IntegerField()
-    vehicleCount = models.BigIntegerField()
-    growthRate = models.FloatField(null=True, blank=True)
+
+class FactAbsPopulation(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    region = models.ForeignKey(
+        DimRegion,
+        to_field='region_id',
+        db_column='region_id',
+        on_delete=models.DO_NOTHING,
+        related_name='pop_records',
+        db_constraint=False,
+    )
+    ref_year = models.SmallIntegerField()
+    population_total = models.IntegerField()
+    population_male = models.IntegerField(blank=True, null=True)
+    population_female = models.IntegerField(blank=True, null=True)
+    source_file = models.CharField(max_length=255, blank=True, null=True)
+    load_batch_id = models.CharField(max_length=64, blank=True, null=True)
 
     class Meta:
-        unique_together = ("state", "year")
-        indexes = [models.Index(fields=["state", "year"])]
+        db_table = 'fact_abs_population'
+        managed = False
 
-    def __str__(self):
-        return f"{self.state} {self.year}: {self.vehicleCount}"
+
+class FactAbsVehicleCensus(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    region = models.ForeignKey(
+        DimRegion,
+        to_field='region_id',
+        db_column='region_id',
+        on_delete=models.DO_NOTHING,
+        related_name='vehicle_records',
+        db_constraint=False,
+    )
+    ref_year = models.SmallIntegerField()
+    vehicle_type = models.CharField(max_length=64, blank=True, null=True)
+    fuel_type = models.CharField(max_length=64, blank=True, null=True)
+    vehicle_count = models.IntegerField()
+    source_file = models.CharField(max_length=255, blank=True, null=True)
+    load_batch_id = models.CharField(max_length=64, blank=True, null=True)
+
+    class Meta:
+        db_table = 'fact_abs_vehicle_census'
+        managed = False
