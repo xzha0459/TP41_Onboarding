@@ -13,3 +13,4 @@ mysqlclient
 pandas
 scikit-learn
 joblib
+requests
