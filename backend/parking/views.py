@@ -149,8 +149,8 @@ class ParkingNearbyPredictApi(APIView):
 
         for spot in nearby_spots:
             prob = predictor.predict_proba(
-                int(float(spot.zone_number)),
-                int(float(spot.kerbside_id)),
+                int(float(spot["zone_number"])),
+                int(float(spot["kerbside_id"])),
                 dt.isoformat() if hasattr(dt, 'isoformat') else str(dt)
             )
             spot["predicted_available_probability"] = prob[0][1]

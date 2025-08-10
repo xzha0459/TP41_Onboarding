@@ -9,3 +9,8 @@ pytz
 sqlparse
 psycopg2-binary
 python-dotenv
+mysqlclient
+pandas
+scikit-learn
+joblib
+requests
