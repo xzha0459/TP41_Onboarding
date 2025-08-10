@@ -140,13 +140,17 @@ class ParkingNearbyPredictApi(APIView):
         nearby_spots = [
             self._annotate_spot_with_distance_and_time(spot, lat, lng)
             for spot in parking_list(filters={"is_occupied": False})
-            if self._calculate_walk_time(lat, lng, spot.latitude, spot.longitude) <= max_walk_time
+            if (
+                self._calculate_walk_time(lat, lng, spot.latitude, spot.longitude) <= max_walk_time
+                and spot.zone_number is not None
+                and spot.kerbside_id is not None
+            )
         ]
 
         for spot in nearby_spots:
             prob = predictor.predict_proba(
-                int(spot["zone_number"]),
-                int(spot["kerbside_id"]),
+                int(float(spot.zone_number)),
+                int(float(spot.kerbside_id)),
                 dt.isoformat() if hasattr(dt, 'isoformat') else str(dt)
             )
             spot["predicted_available_probability"] = prob[0][1]
@@ -154,12 +158,10 @@ class ParkingNearbyPredictApi(APIView):
         serializer = self.ParkingNearbyPredictOutputSerializer(nearby_spots, many=True)
         return Response(serializer.data)
     
-    # TODO: Remove repeated method
     def _calculate_walk_time(self, from_lat, from_lng, to_lat, to_lng):
         distance_m = haversine(float(from_lat), float(from_lng), float(to_lat), float(to_lng))
         return distance_m / WALKING_SPEED_M_PER_S / 60
 
-    # TODO: Remove repeated method
     def _annotate_spot_with_distance_and_time(self, spot, from_lat, from_lng):
         distance_m = haversine(float(from_lat), float(from_lng), float(spot.latitude), float(spot.longitude))
         return {
