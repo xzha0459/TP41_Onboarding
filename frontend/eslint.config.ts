@@ -1,28 +1,51 @@
-import { globalIgnores } from 'eslint/config'
-import { defineConfigWithVueTs, vueTsConfigs } from '@vue/eslint-config-typescript'
-import pluginVue from 'eslint-plugin-vue'
-import pluginVitest from '@vitest/eslint-plugin'
-import skipFormatting from '@vue/eslint-config-prettier/skip-formatting'
+// eslint.config.ts
+import js from '@eslint/js'
+import tsParser from '@typescript-eslint/parser'
+import tsPlugin from '@typescript-eslint/eslint-plugin'
+import vuePlugin from 'eslint-plugin-vue'
+import vueParser from 'vue-eslint-parser'
 
-// To allow more languages other than `ts` in `.vue` files, uncomment the following lines:
-// import { configureVueProject } from '@vue/eslint-config-typescript'
-// configureVueProject({ scriptLangs: ['ts', 'tsx'] })
-// More info at https://github.com/vuejs/eslint-config-typescript/#advanced-setup
+export default [
+  js.configs.recommended,
 
-export default defineConfigWithVueTs(
+  // TypeScript files
   {
-    name: 'app/files-to-lint',
-    files: ['**/*.{ts,mts,tsx,vue}'],
+    files: ['**/*.ts', '**/*.tsx'],
+    languageOptions: {
+      parser: tsParser,
+      sourceType: 'module',
+      ecmaVersion: 'latest',
+    },
+    plugins: { '@typescript-eslint': tsPlugin },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+      ],
+    },
   },
 
-  globalIgnores(['**/dist/**', '**/dist-ssr/**', '**/coverage/**']),
-
-  pluginVue.configs['flat/essential'],
-  vueTsConfigs.recommended,
-  
+  // Vue SFC
   {
-    ...pluginVitest.configs.recommended,
-    files: ['src/**/__tests__/*'],
+    files: ['**/*.vue'],
+    languageOptions: {
+      parser: vueParser,
+      parserOptions: {
+        parser: tsParser,
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+      },
+    },
+    plugins: { vue: vuePlugin, '@typescript-eslint': tsPlugin },
+    rules: {
+
+      'vue/script-setup-uses-vars': 'error',
+
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+      ],
+    },
   },
-  skipFormatting,
-)
+]
