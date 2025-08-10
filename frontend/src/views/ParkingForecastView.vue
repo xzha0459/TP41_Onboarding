@@ -2,11 +2,13 @@
   <section class="container">
     <h1>Parking Forecast</h1>
 
-    <!-- 搜索 -->
-    <SearchBar @search="onSearch" />
-
-    <!-- 控制 -->
-    <div class="controls">
+    <!-- 输入表单 -->
+    <div class="form">
+      <input
+        v-model="address"
+        placeholder="Enter address..."
+        class="address-input"
+      />
       <input type="date" v-model="date" class="input">
       <input type="time" v-model="time" class="input">
       <input v-model.number="maxWalk" type="number" min="1" max="30" class="walk-input" placeholder="5">
@@ -32,7 +34,6 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import GoogleParkingMap from "@/components/maps/GoogleParkingMap.vue";
-import SearchBar from "@/components/SearchBar.vue";
 import { fetchNearbyPredict, type PredictItem } from "@/services/api";
 
 const address = ref("");
@@ -47,10 +48,6 @@ const results = ref<PredictItem[]>([]);
 const now = new Date();
 date.value = now.toISOString().split('T')[0];
 time.value = now.toTimeString().slice(0, 5);
-
-function onSearch(addr: string) {
-  address.value = addr;
-}
 
 async function checkForecast() {
   if (!address.value) return;
@@ -93,47 +90,61 @@ const markers = computed(() =>
 <style scoped>
 .container { max-width: 980px; margin: 0 auto; padding: 16px; }
 
-.controls {
+.form {
   display: flex;
   gap: 8px;
   margin: 16px 0;
   flex-wrap: wrap;
 }
 
+.address-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 8px;
+  border: 1px solid #e1e5e9;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1a1a1a;
+}
+
 .input {
   padding: 8px;
-  border: 1px solid #444;
+  border: 1px solid #e1e5e9;
   border-radius: 6px;
-  background: #2a2a2a;
-  color: #fff;
+  background: #ffffff;
+  color: #1a1a1a;
 }
 
 .walk-input {
   width: 60px;
   padding: 8px;
-  border: 1px solid #444;
+  border: 1px solid #e1e5e9;
   border-radius: 6px;
-  background: #2a2a2a;
-  color: #fff;
+  background: #ffffff;
+  color: #1a1a1a;
 }
 
 .btn {
   padding: 8px 16px;
-  border: none;
+  border: 1px solid #e1e5e9;
   border-radius: 6px;
-  background: #2ea44f;
+  background: #0d6efd;
   color: white;
   cursor: pointer;
 }
 
 .btn:disabled {
-  background: #444;
+  background: #6c757d;
   cursor: not-allowed;
 }
 
 .error {
-  color: #c00;
+  color: #dc3545;
   margin: 12px 0;
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  padding: 8px;
+  border-radius: 6px;
 }
 
 .cards {
@@ -144,8 +155,8 @@ const markers = computed(() =>
 }
 
 .card {
-  background: #1a1a1a;
-  border: 1px solid #333;
+  background: #f8f9fa;
+  border: 1px solid #e1e5e9;
   border-radius: 8px;
   padding: 12px;
 }
@@ -153,12 +164,12 @@ const markers = computed(() =>
 .prob {
   font-size: 16px;
   font-weight: bold;
-  color: #2ea44f;
+  color: #198754;
   margin-bottom: 4px;
 }
 
 .info {
-  color: #ccc;
+  color: #6c757d;
   font-size: 14px;
 }
 </style>

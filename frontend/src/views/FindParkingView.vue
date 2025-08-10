@@ -1,4 +1,4 @@
-// 按距离排序的结果<template>
+<template>
   <section class="container">
     <h1>Find Parking</h1>
 
@@ -157,18 +157,31 @@ function getErrorMessage(err: any): string {
   if (err?.response?.data) return `Error: ${err.response.data}`;
   return err?.message || "Request failed";
 }
-
-async function onSubmit() {
-  // 不需要了
-}
 </script>
 
 <style scoped>
 .container { max-width: 980px; margin: 0 auto; padding: 16px; }
+
 .controls { margin: 12px 0; }
-.controls label { color: #ccc; font-size: 14px; }
-.walk-input { width: 50px; margin: 0 4px; padding: 4px; background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 4px; }
-.error { color: #c00; }
+.controls label { color: #6c757d; font-size: 14px; }
+.walk-input {
+  width: 50px;
+  margin: 0 4px;
+  padding: 4px;
+  background: #ffffff;
+  border: 1px solid #e1e5e9;
+  color: #1a1a1a;
+  border-radius: 4px;
+}
+
+.error {
+  color: #dc3545;
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  padding: 8px;
+  border-radius: 6px;
+  margin: 12px 0;
+}
 
 .cards {
   display: grid;
@@ -178,20 +191,20 @@ async function onSubmit() {
 }
 
 .card {
-  background: #121212;
-  border: 1px solid #2a2a2a;
+  background: #ffffff;
+  border: 1px solid #e1e5e9;
   border-radius: 12px;
   padding: 12px 14px;
-  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+  box-shadow: 0 1px 3px rgba(0,0,0,.1);
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
 }
 
 .card:hover {
-  border-color: #4a4a4a;
+  border-color: #0d6efd;
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,.3);
+  box-shadow: 0 4px 8px rgba(0,0,0,.15);
 }
 
 .card-head {
@@ -207,21 +220,21 @@ async function onSubmit() {
   font-size: 12px;
   line-height: 18px;
   border: 1px solid transparent;
+  color: white;
 }
 
-.badge.free { background: #1f6f3f; border-color: #2ea44f; }
-.badge.occupied { background: #6b2a2a; border-color: #d33; }
+.badge.free { background: #198754; border-color: #198754; }
+.badge.occupied { background: #dc3545; border-color: #dc3545; }
 
-.zone { opacity: .8; font-size: 12px; }
-.meta { opacity: .9; font-size: 13px; margin: 2px 0; }
-.desc { opacity: .8; font-size: 13px; margin-bottom: 4px; }
+.zone { color: #6c757d; font-size: 12px; }
+.meta { color: #1a1a1a; font-size: 13px; margin: 2px 0; }
+.desc { color: #6c757d; font-size: 13px; margin-bottom: 4px; }
 
 .click-hint {
   font-size: 11px;
-  opacity: 0.6;
+  color: #6c757d;
   text-align: center;
   margin-top: 8px;
-  color: #888;
 }
 
 /* 弹窗样式 */
@@ -231,7 +244,7 @@ async function onSubmit() {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -239,13 +252,14 @@ async function onSubmit() {
 }
 
 .modal {
-  background: #1a1a1a;
+  background: #ffffff;
   border-radius: 12px;
   max-width: 500px;
   width: 90%;
   max-height: 80vh;
   overflow-y: auto;
-  border: 1px solid #333;
+  border: 1px solid #e1e5e9;
+  box-shadow: 0 10px 25px rgba(0,0,0,.15);
 }
 
 .modal-header {
@@ -253,18 +267,18 @@ async function onSubmit() {
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid #e1e5e9;
 }
 
 .modal-header h3 {
   margin: 0;
-  color: #fff;
+  color: #1a1a1a;
 }
 
 .close-btn {
   background: none;
   border: none;
-  color: #888;
+  color: #6c757d;
   font-size: 24px;
   cursor: pointer;
   padding: 0;
@@ -277,8 +291,8 @@ async function onSubmit() {
 }
 
 .close-btn:hover {
-  background: #333;
-  color: #fff;
+  background: #f8f9fa;
+  color: #1a1a1a;
 }
 
 .modal-content {
@@ -290,7 +304,7 @@ async function onSubmit() {
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid #2a2a2a;
+  border-bottom: 1px solid #f8f9fa;
 }
 
 .detail-row:last-child {
@@ -299,31 +313,41 @@ async function onSubmit() {
 
 .label {
   font-weight: 600;
-  color: #ccc;
+  color: #6c757d;
   min-width: 100px;
 }
 
 .modal-actions {
   padding: 16px 20px;
-  border-top: 1px solid #333;
+  border-top: 1px solid #e1e5e9;
   display: flex;
   gap: 12px;
   justify-content: flex-end;
 }
 
 .btn-primary {
-  background: #2ea44f;
+  background: #0d6efd;
   color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
 }
 
 .btn-primary:hover {
-  background: #2c974b;
+  background: #0b5ed7;
 }
 
 .btn-secondary {
-  background: #333;
-  color: #ccc;
+  background: #6c757d;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
 }
 
-
+.btn-secondary:hover {
+  background: #5c636a;
+}
 </style>
