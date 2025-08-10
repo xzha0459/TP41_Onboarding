@@ -9,7 +9,7 @@
         <router-link to="/insights">Insights</router-link>
         <router-link to="/history">History</router-link>
         <router-link to="/forecast">Forecast</router-link>
-        <router-link to="/green">Green</router-link>
+        <router-link to="/green">Green Parking</router-link>
       </nav>
     </div>
   </header>
