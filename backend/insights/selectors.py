@@ -45,29 +45,34 @@ def getSeriesPopulation(region: DimRegion, startYear: Optional[int]=None, endYea
         data = [x for x in data if x["year"] <= endYear]
     return data
 
-def getSeriesVehiclesByState(stateCode: str, startYear: Optional[int]=None, endYear: Optional[int]=None) -> List[Dict]:
+def getSeriesVehiclesByState(
+    stateCode: str,
+    startYear: Optional[int] = None,
+    endYear: Optional[int] = None,
+) -> List[Dict]:
     """
-    Treats stateCode as a region_code in DimRegion (e.g., 'VIC').
-    If your data uses another code for VIC, adjust the lookup below.
+    Returns [{year, value}] for the given Australian state code (e.g., 'VIC', 'NSW'),
+    summed from fact_abs_vehicle_census for that state's region_id.
     """
+    stateCode = (stateCode or "").upper()
     try:
-        region = DimRegion.objects.get(region_code=stateCode)
+        region = DimRegion.objects.get(region_type="STATE", region_code=stateCode)
     except DimRegion.DoesNotExist:
         return []
 
-    qs = (
-        FactAbsVehicleCensus.objects
-        .filter(region=region)
-        .values("ref_year")
-        .annotate(total=Sum("vehicle_count"))
-        .order_by("ref_year")
-    )
-    data = [{"year": r["ref_year"], "value": int(r["total"] or 0)} for r in qs]
+    qs = FactAbsVehicleCensus.objects.filter(region=region)
     if startYear is not None:
-        data = [x for x in data if x["year"] >= startYear]
+        qs = qs.filter(ref_year__gte=startYear)
     if endYear is not None:
-        data = [x for x in data if x["year"] <= endYear]
-    return data
+        qs = qs.filter(ref_year__lte=endYear)
+
+    rows = (
+        qs.values("ref_year")
+          .annotate(value=Sum("vehicle_count"))
+          .order_by("ref_year")
+    )
+    return [{"year": r["ref_year"], "value": int(r["value"] or 0)} for r in rows]
+
 
 def yearlyPercentageChange(series: List[Dict]) -> List[Dict]:
     out = []

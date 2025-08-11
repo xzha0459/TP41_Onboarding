@@ -23,52 +23,38 @@ def _parse_years(request, default_start: int, default_end: int):
         start, end = end, start
     return start, end
 
-def _get_vic_region():
-    try:
-        return DimRegion.objects.get(region_type="STATE", region_name=VIC_NAME)
-    except DimRegion.DoesNotExist:
-        try:
-            return DimRegion.objects.get(region_id=CBD_REGION_ID)
-        except DimRegion.DoesNotExist:
-            return None
 
+@extend_schema(
+    summary="Vehicle registrations (VIC only)",
+    parameters=[
+        OpenApiParameter(name="startYear", type=int, required=False, description="Default 2016"),
+        OpenApiParameter(name="endYear", type=int, required=False, description="Default 2021"),
+    ],
+    responses={200: OpenApiResponse(description="Series & growth metrics for Victoria")}
+)
 class CarOwnershipApi(APIView):
-    @extend_schema(
-        summary="Vehicle registrations (Victoria only)",
-        parameters=[
-            OpenApiParameter(name="startYear", type=int, required=False, description="Default 2016"),
-            OpenApiParameter(name="endYear", type=int, required=False, description="Default 2021"),
-        ],
-        responses={200: OpenApiResponse(description="Series & growth metrics")}
-    )
     def get(self, request):
         start, end = _parse_years(request, 2016, 2021)
-        vic = _get_vic_region()
 
-        if vic:
-            qs = (FactAbsVehicleCensus.objects
-                  .filter(region=vic, ref_year__gte=start, ref_year__lte=end)
-                  .values("ref_year")
-                  .annotate(total=Sum("vehicle_count"))
-                  .order_by("ref_year"))
-        else:
-            qs = (FactAbsVehicleCensus.objects
-                  .filter(ref_year__gte=start, ref_year__lte=end)
-                  .values("ref_year")
-                  .annotate(total=Sum("vehicle_count"))
-                  .order_by("ref_year"))
+        try:
+            vic = DimRegion.objects.get(region_type="STATE", region_code=VIC_NAME)
+        except DimRegion.DoesNotExist:
+            return Response({"error": "VIC not found in dim_region"}, status=404)
+
+        qs = (FactAbsVehicleCensus.objects
+              .filter(region=vic, ref_year__gte=start, ref_year__lte=end)
+              .values("ref_year")
+              .annotate(total=Sum("vehicle_count"))
+              .order_by("ref_year"))
 
         rows = list(qs)
         if not rows:
-            return Response({"error": f"no vehicle data in {start}-{end}"}, status=404)
+            return Response({"error": f"no VIC vehicle data in {start}-{end}"}, status=404)
 
         series = [{"year": r["ref_year"], "value": int(r["total"] or 0)} for r in rows]
+
         return Response({
-            "region": {
-                "name": vic.region_name if vic else "Victoria (fallback)",
-                "code": vic.region_code if vic else None,
-                "type": vic.region_type if vic else "STATE",
-            },
+            "region": {"code": VIC_NAME, "name": "Victoria", "type": "STATE"},
             "values": series,
             "yearlyPercentageChange": yearlyPercentageChange(series),
             "averageAnnualGrowthRate": averageAnnualGrowthRate(series),
