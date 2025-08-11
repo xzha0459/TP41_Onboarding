@@ -8,7 +8,7 @@
     <input type="date" v-model="date" class="input">
     <input type="time" v-model="time" class="input">
     <input v-model.number="maxWalk" type="number" min="1" max="30" class="walk-input" placeholder="5">
-    <button @click="onSubmit" :disabled="loading || !address" class="btn">Check</button>
+    <button @click="onSubmit" :disabled="loading || !address.trim()" class="btn">Check</button>
   </div>
 </template>
 

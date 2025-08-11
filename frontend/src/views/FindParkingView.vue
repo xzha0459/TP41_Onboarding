@@ -2,7 +2,6 @@
   <section class="container">
     <h1>Find Parking</h1>
 
-    <!-- 搜索 -->
     <SearchBar @search="onSearch" />
 
     <div class="controls">
@@ -11,15 +10,13 @@
       </label>
     </div>
 
-    <!-- 地图（根据结果渲染点位） -->
     <GoogleParkingMap :markers="markers" />
 
     <p v-if="loading">Loading…</p>
     <p v-else-if="error" class="error">{{ error }}</p>
 
-    <!-- 列表 -->
-    <!-- 卡片列表 -->
-    <div v-else class="cards">
+
+    <div v-if="!loading && !error && sortedResults.length" class="cards">
       <article
         v-for="p in sortedResults"
         :key="p.kerbside_id"
@@ -38,10 +35,14 @@
         <p class="desc">{{ p.status_description }}</p>
         <div class="click-hint">Click for details</div>
       </article>
-      <p v-if="!sortedResults.length && searched">No results.</p>
     </div>
 
-    <!-- 详情弹窗 -->
+    <!-- 无结果提示 - 与 Forecast 页面一致 -->
+    <p v-if="!loading && !error && searched && !sortedResults.length" class="no-results">
+      No parking available in this area...
+    </p>
+
+
     <div v-if="selectedParking" class="modal-overlay" @click="closeDetails">
       <div class="modal" @click.stop>
         <header class="modal-header">
@@ -95,7 +96,6 @@
 
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import axios from "axios";
 import GoogleParkingMap from "@/components/maps/GoogleParkingMap.vue";
 import SearchBar from "@/components/SearchBar.vue";
 import { fetchNearby, type NearbyItem } from "@/services/api";
@@ -107,7 +107,6 @@ const searched = ref(false);
 const results = ref<NearbyItem[]>([]);
 const selectedParking = ref<NearbyItem | null>(null);
 
-// 搜索处理
 async function onSearch(address: string) {
   loading.value = true;
   error.value = "";
@@ -117,17 +116,17 @@ async function onSearch(address: string) {
     const body: any = { address };
     if (maxWalk.value !== 5) body.max_walk_time = maxWalk.value;
     results.value = await fetchNearby(body);
-  } catch (err) {
-    error.value = getErrorMessage(err);
+  } catch (err: any) {
+    error.value = err?.response?.data || err?.message || "Request failed";
   } finally {
     loading.value = false;
   }
 }
+
 const sortedResults = computed(() =>
   [...results.value].sort((a, b) => a.distance_km - b.distance_km)
 );
 
-// 地图点位：把后端返回结构映射成 markers
 const markers = computed(() =>
   sortedResults.value.map(p => ({
     lat: p.latitude,
@@ -137,33 +136,36 @@ const markers = computed(() =>
   }))
 );
 
-// 显示详情
 function showDetails(parking: NearbyItem) {
   selectedParking.value = parking;
 }
 
-// 关闭详情
 function closeDetails() {
   selectedParking.value = null;
 }
 
-// 在地图中打开
 function openInMaps(parking: NearbyItem) {
   const url = `https://www.google.com/maps?q=${parking.latitude},${parking.longitude}`;
   window.open(url, '_blank');
 }
-
-function getErrorMessage(err: any): string {
-  if (err?.response?.data) return `Error: ${err.response.data}`;
-  return err?.message || "Request failed";
-}
 </script>
 
 <style scoped>
-.container { max-width: 980px; margin: 0 auto; padding: 16px; }
+.container {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 16px;
+}
 
-.controls { margin: 12px 0; }
-.controls label { color: #6c757d; font-size: 14px; }
+.controls {
+  margin: 12px 0;
+}
+
+.controls label {
+  color: #6c757d;
+  font-size: 14px;
+}
+
 .walk-input {
   width: 50px;
   margin: 0 4px;
@@ -183,6 +185,13 @@ function getErrorMessage(err: any): string {
   margin: 12px 0;
 }
 
+.no-results {
+  color: #1a1a1a;
+  text-align: center;
+  margin: 20px 0;
+  font-style: italic;
+}
+
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -198,7 +207,6 @@ function getErrorMessage(err: any): string {
   box-shadow: 0 1px 3px rgba(0,0,0,.1);
   cursor: pointer;
   transition: all 0.2s ease;
-  position: relative;
 }
 
 .card:hover {
@@ -223,12 +231,32 @@ function getErrorMessage(err: any): string {
   color: white;
 }
 
-.badge.free { background: #198754; border-color: #198754; }
-.badge.occupied { background: #dc3545; border-color: #dc3545; }
+.badge.free {
+  background: #198754;
+  border-color: #198754;
+}
 
-.zone { color: #6c757d; font-size: 12px; }
-.meta { color: #1a1a1a; font-size: 13px; margin: 2px 0; }
-.desc { color: #6c757d; font-size: 13px; margin-bottom: 4px; }
+.badge.occupied {
+  background: #dc3545;
+  border-color: #dc3545;
+}
+
+.zone {
+  color: #6c757d;
+  font-size: 12px;
+}
+
+.meta {
+  color: #1a1a1a;
+  font-size: 13px;
+  margin: 2px 0;
+}
+
+.desc {
+  color: #6c757d;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
 
 .click-hint {
   font-size: 11px;
@@ -237,7 +265,6 @@ function getErrorMessage(err: any): string {
   margin-top: 8px;
 }
 
-/* 弹窗样式 */
 .modal-overlay {
   position: fixed;
   top: 0;
