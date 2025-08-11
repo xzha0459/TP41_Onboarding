@@ -23,41 +23,53 @@ def _parse_years(request, default_start: int, default_end: int):
         start, end = end, start
     return start, end
 
+def _get_vic_region():
+    # Avoid .get() – pick one deterministically if duplicates exist.
+    base = DimRegion.objects.filter(region_name__iexact=VIC_NAME)
+    # Prefer STATE rows if present, then the smallest region_id for stability
+    obj = base.filter(region_type="STATE").order_by("region_id").first()
+    if obj:
+        return obj
+    return base.order_by("region_type", "region_id").first()
 
-@extend_schema(
-    summary="Vehicle registrations (VIC only)",
-    parameters=[
-        OpenApiParameter(name="startYear", type=int, required=False, description="Default 2016"),
-        OpenApiParameter(name="endYear", type=int, required=False, description="Default 2021"),
-    ],
-    responses={200: OpenApiResponse(description="Series & growth metrics for Victoria")}
-)
 class CarOwnershipApi(APIView):
+    @extend_schema(
+        summary="Vehicle ownership in Victoria (years only)",
+        parameters=[
+            OpenApiParameter(name="startYear", type=int, required=False, description="Default 2016"),
+            OpenApiParameter(name="endYear", type=int, required=False, description="Default 2021"),
+        ],
+        responses={200: OpenApiResponse(description="Series & growth metrics")},
+    )
     def get(self, request):
         start, end = _parse_years(request, 2016, 2021)
 
-        try:
-            vic = DimRegion.objects.get(region_type="STATE", region_code=VIC_NAME)
-        except DimRegion.DoesNotExist:
-            return Response({"error": "VIC not found in dim_region"}, status=404)
+        vic = _get_vic_region()
+        if not vic:
+            return Response({"error": "Could not resolve Victoria region"}, status=404)
 
-        qs = (FactAbsVehicleCensus.objects
-              .filter(region=vic, ref_year__gte=start, ref_year__lte=end)
-              .values("ref_year")
-              .annotate(total=Sum("vehicle_count"))
-              .order_by("ref_year"))
+        qs = (
+            FactAbsVehicleCensus.objects
+            .filter(region=vic, ref_year__gte=start, ref_year__lte=end)
+            .values("ref_year")
+            .annotate(total=Sum("vehicle_count"))
+            .order_by("ref_year")
+        )
 
-        rows = list(qs)
-        if not rows:
-            return Response({"error": f"no VIC vehicle data in {start}-{end}"}, status=404)
+        years = [row["ref_year"] for row in qs]
+        vehicle_counts = [int(row["total"] or 0) for row in qs]
 
-        series = [{"year": r["ref_year"], "value": int(r["total"] or 0)} for r in rows]
+        total_growth_pct = None
+        if len(vehicle_counts) >= 2 and vehicle_counts[0]:
+            total_growth_pct = round(
+                (vehicle_counts[-1] - vehicle_counts[0]) / vehicle_counts[0] * 100, 2
+            )
 
+        # Same shape your chart used before
         return Response({
-            "region": {"code": VIC_NAME, "name": "Victoria", "type": "STATE"},
-            "values": series,
-            "yearlyPercentageChange": yearlyPercentageChange(series),
-            "averageAnnualGrowthRate": averageAnnualGrowthRate(series),
+            "years": years,
+            "vehicleCounts": vehicle_counts,
+            "totalGrowthPct": total_growth_pct,
         })
 
 class CbdPopulationGrowthApi(APIView):

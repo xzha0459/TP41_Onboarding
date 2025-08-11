@@ -53,3 +53,33 @@ export async function fetchNearbyPredict(body: PredictInput): Promise<PredictIte
   const { data } = await api.post<PredictItem[]>("/parking/nearby/predict", payload);
   return data;
 }
+
+export async function getTopSegments(startDate: string, endDate: string, limit = 10) {
+  const url = `/parking/history/top-segments?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}&limit=${limit}`;
+  const r = await fetch(url);
+  const j = await r.json();
+  if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`);
+  return j as { items: Array<{ segment_id: string; samples: number; first_ts: string; last_ts: string }>; window: any };
+}
+
+export async function getHistoryBySegment(id: string, startDate: string, endDate: string) {
+  const r = await fetch('/parking/history', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scope: 'segment', id, startDate, endDate }),
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`);
+  return j as { items: Array<{ timestamp: string; free_ratio: number | null; samples: number }>; summary: any; hint?: string };
+}
+
+export async function getSummaryBySegment(id: string, startDate: string, endDate: string, minSamplesPerBucket = 3, topN = 5) {
+  const r = await fetch('/parking/history/summary', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scope: 'segment', id, startDate, endDate, minSamplesPerBucket, topN }),
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`);
+  return j as { heatmap: Array<{ dow: number; hh: number; samples: number; avg_free_ratio: number }>; windows: Array<{ dow: number; hour: number; avg_free_ratio: number }>; hint?: string };
+}
