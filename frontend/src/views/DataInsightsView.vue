@@ -1,199 +1,147 @@
 <template>
-  <Section title="Population–Traffic Analysis">
+  <Section title="Data Insights">
     <div class="controls">
       <label>Start
-        <input type="number" v-model.number="startYear" min="2001" max="2025" />
+        <input type="number" v-model.number="startYear" :min="2000" :max="2100" />
       </label>
       <label>End
-        <input type="number" v-model.number="endYear" min="2001" max="2025" />
+        <input type="number" v-model.number="endYear" :min="2000" :max="2100" />
       </label>
       <button @click="refresh" :disabled="loading">{{ loading ? 'Loading…' : 'Refresh' }}</button>
       <span v-if="error" class="err">{{ error }}</span>
     </div>
 
-    <div class="chart"><canvas id="popChart"></canvas></div>
-    <div v-if="popAagr != null" class="meta">
-      Average Annual Growth: {{ popAagr.toFixed(2) }}%
-    </div>
-  </Section>
+    <div class="cards">
+      <div class="card">
+        <h3>CBD Population</h3>
+        <div class="chart"><canvas ref="popCanvas"></canvas></div>
+        <div v-if="popAagr != null" class="meta">
+          Average Annual Growth: {{ popAagr.toFixed(2) }}%
+        </div>
+      </div>
 
-  <Section title="Car Ownership (Victoria)">
-    <div class="chart"><canvas id="vehChart"></canvas></div>
-    <div v-if="vehCagr != null" class="meta">
-      CAGR: {{ vehCagr.toFixed(2) }}%
+      <div class="card">
+        <h3>Car Ownership (per 1000)</h3>
+        <div class="chart"><canvas ref="carCanvas"></canvas></div>
+        <div v-if="carAagr != null" class="meta">
+          Average Annual Growth: {{ carAagr.toFixed(2) }}%
+        </div>
+      </div>
     </div>
   </Section>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import Section from '../components/BaseSection.vue'
-import { Chart, registerables } from 'chart.js'
-Chart.register(...registerables)
+import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { insightsApi, type SeriesPoint } from '@/services/insight';
+import Chart from 'chart.js/auto';
 
-const startYear = ref(2001)
-const endYear   = ref(2021)
-const loading   = ref(false)
-const error     = ref<string | null>(null)
+const startYear = ref<number>(2001);
+const endYear   = ref<number>(2021);
+const loading   = ref(false);
+const error     = ref<string | null>(null);
 
-const popAagr = ref<number | null>(null)
-const vehCagr = ref<number | null>(null)
+const popCanvas = ref<HTMLCanvasElement | null>(null);
+const carCanvas = ref<HTMLCanvasElement | null>(null);
 
-let popChart: Chart | null = null
-let vehChart: Chart | null = null
+let popChart: Chart | null = null;
+let carChart: Chart | null = null;
+
+const popAagr = ref<number | null>(null);
+const carAagr = ref<number | null>(null);
+
+// If you don't want to run local backend, just point VITE_API_BASE_URL to your remote:
+// .env.local -> VITE_API_BASE_URL=https://api-tp41.xyz
+const CBD_REGION = 'CBD_MEL';
+const STATE_CODE = 'VIC';
+
+function computeAagr(points: SeriesPoint[]) {
+  if (!points?.length) return null;
+  const firstY = points[0]?.year;
+  const lastY  = points[points.length - 1]?.year;
+  const n = Math.max(1, Number(lastY) - Number(firstY));
+  const first = points[0]?.value ?? 0;
+  const last  = points[points.length - 1]?.value ?? 0;
+  if (first <= 0 || last <= 0) return null;
+  // CAGR as percentage
+  return (Math.pow(last / first, 1 / n) - 1) * 100;
+}
 
 function destroyCharts() {
-  if (popChart) { popChart.destroy(); popChart = null }
-  if (vehChart) { vehChart.destroy(); vehChart = null }
+  popChart?.destroy(); popChart = null;
+  carChart?.destroy(); carChart = null;
 }
 
-function years(a:number,b:number){
-  const s=Math.min(a,b), e=Math.max(a,b)
-  return Array.from({length:e-s+1},(_,i)=>s+i)
+function makeLineChart(el: HTMLCanvasElement, labels: (string|number)[], data: number[], title: string) {
+  return new Chart(el.getContext('2d')!, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{ label: title, data, tension: 0.2, pointRadius: 2 }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: { x: { grid: { display: false } }, y: { beginAtZero: false } },
+      plugins: { legend: { display: true } }
+    }
+  });
 }
 
-function computeCagr(vals:number[], labels:(number|string)[]) {
-  if (!vals?.length) return null
-  const first = vals[0]
-  const last  = vals[vals.length-1]
-  // years spanned (handles non-contiguous labels)
-  const firstYear = Number(labels[0])
-  const lastYear  = Number(labels[labels.length-1])
-  const n = Math.max(1, (isFinite(firstYear) && isFinite(lastYear)) ? (lastYear - firstYear) : (vals.length-1))
-  if (first <= 0 || last <= 0 || n <= 0) return null
-  return (Math.pow(last/first, 1/n) - 1) * 100
-}
+async function refresh() {
+  loading.value = true;
+  error.value = null;
+  destroyCharts();
 
-async function apiGet(path: string){
-  const url = path.startsWith('/') ? path : `/${path}`
-  const r = await fetch(url)
-  const j = await r.json().catch(()=> ({}))
-  if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`)
-  return j
-}
-
-async function draw() {
-  loading.value = true
-  error.value = null
   try {
-    destroyCharts()
+    // 1) Population
+    const pop = await insightsApi.cbdPopulation(CBD_REGION, startYear.value, endYear.value);
+    const popLabels = pop.values.map(p => p.year);
+    const popData   = pop.values.map(p => p.value);
+    popAagr.value   = computeAagr(pop.values);
 
-    // ----- Population -----
-    const pop = await apiGet(`/insights/cbdPopulation?startYear=${startYear.value}&endYear=${endYear.value}`)
-    const popItems = Array.isArray(pop.items) ? pop.items
-                    : Array.isArray(pop.values) ? pop.values
-                    : []
-    const popLabels = popItems.map((x:any)=> x.year ?? x.ref_year)
-    const popData   = popItems.map((x:any)=> Number(x.population ?? x.value ?? 0))
-    popAagr.value   = typeof pop.averageAnnualGrowthRate === 'number'
-                      ? pop.averageAnnualGrowthRate
-                      : computeCagr(popData, popLabels)
-
-    await nextTick()
-    const popCtx = (document.getElementById('popChart') as HTMLCanvasElement)?.getContext('2d')
-    if (popCtx && popLabels.length) {
-      popChart = new Chart(popCtx, {
-        type: 'line',
-        data: {
-          labels: popLabels,
-          datasets: [{ label: 'CBD Population', data: popData, tension: 0.2, pointRadius: 2 }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: { ticks: { callback: (v) => Number(v).toLocaleString() } }
-          },
-          plugins: {
-            tooltip: {
-              callbacks: {
-                label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.y).toLocaleString()}`
-              }
-            }
-          }
-        }
-      })
+    if (popCanvas.value) {
+      popChart = makeLineChart(popCanvas.value, popLabels, popData, 'Population');
     }
 
-    // ----- Vehicles (Victoria) -----
-    const veh = await apiGet(`/insights/carOwnership?startYear=${startYear.value}&endYear=${endYear.value}`)
-    // Accept multiple shapes from backend
-    let vehLabels: (number|string)[] = []
-    let vehVals: number[] = []
+    // 2) Car ownership per 1000
+    const car = await insightsApi.carOwnership(STATE_CODE, startYear.value, endYear.value);
+    // prefer vehiclesPer1000 if backend provides it; fallback to values
+    const series = (car.vehiclesPer1000 && car.vehiclesPer1000.length ? car.vehiclesPer1000 : car.values) || [];
+    const carLabels = series.map(p => p.year);
+    const carData   = series.map(p => p.value);
+    carAagr.value   = computeAagr(series);
 
-    if (Array.isArray(veh.items)) {
-      vehLabels = veh.items.map((x:any)=> x.ref_year ?? x.year)
-      vehVals   = veh.items.map((x:any)=> Number(x.total ?? x.vehicle_count ?? x.count ?? 0))
-    } else if (Array.isArray(veh.years) && Array.isArray(veh.vehicleCounts)) {
-      vehLabels = veh.years
-      vehVals   = veh.vehicleCounts.map((n:any)=> Number(n ?? 0))
-    } else if (Array.isArray(veh.values) && Array.isArray(veh.labels)) {
-      vehLabels = veh.labels
-      vehVals   = veh.values.map((n:any)=> Number(n ?? 0))
-    } else {
-      // fallback: show zeroed series for selected range
-      vehLabels = years(startYear.value, endYear.value)
-      vehVals   = vehLabels.map(()=>0)
+    if (carCanvas.value) {
+      carChart = makeLineChart(carCanvas.value, carLabels, carData, 'Vehicles per 1000');
     }
 
-    vehCagr.value = typeof veh.cagrPct === 'number'
-      ? veh.cagrPct
-      : computeCagr(vehVals, vehLabels)
-
-    await nextTick()
-    const vehCtx = (document.getElementById('vehChart') as HTMLCanvasElement)?.getContext('2d')
-    if (vehCtx && vehLabels.length) {
-      vehChart = new Chart(vehCtx, {
-        type: 'bar',
-        data: {
-          labels: vehLabels.map(String),
-          datasets: [{ label: 'Registered vehicles', data: vehVals, borderWidth: 1 }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            x: { title: { display: true, text: 'Year' } },
-            y: {
-              title: { display: true, text: 'Vehicles' },
-              ticks: { callback: (v) => Number(v).toLocaleString() }
-            }
-          },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.y).toLocaleString()}`
-              }
-            }
-          }
-        }
-      })
-    }
-
-  } catch (e:any) {
-    error.value = e?.message ?? String(e)
-    destroyCharts()
+  } catch (e: any) {
+    error.value = e?.message || 'Failed to load insights';
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
-function refresh() {
-  if (Number.isFinite(startYear.value) && Number.isFinite(endYear.value)) draw()
-}
-
-onMounted(draw)
-onBeforeUnmount(destroyCharts)
-watch([startYear, endYear], draw)
+onMounted(() => { refresh(); });
+onBeforeUnmount(destroyCharts);
 </script>
 
 <style scoped>
-.controls{display:flex; gap:.75rem; align-items:end; margin-bottom:.5rem}
+.controls{display:flex; gap:.75rem; align-items:end; margin-bottom:.75rem}
 .controls label{display:flex; flex-direction:column; gap:.25rem}
-.controls input{border:1px solid #ddd; border-radius:8px; padding:.4rem .6rem; width:7rem}
-.controls button{padding:.45rem .8rem; border-radius:8px; background:black; color:#fff}
+.controls input{border:1px solid #e5e7eb; border-radius:8px; padding:.4rem .6rem; width:8rem}
+.controls button{padding:.46rem .9rem; border-radius:8px; background:black; color:#fff}
 .err{color:#b91c1c; font-size:.9rem}
+
+.cards{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+
+.card{border:1px solid #e5e7eb; border-radius:16px; padding:12px}
+.chart{height:300px} /* give canvas a real height */
 .meta{font-size:.85rem; opacity:.8; margin-top:.5rem}
-.chart{height:300px} /* important: gives the canvas a real height */
 </style>
