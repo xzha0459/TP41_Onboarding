@@ -45,7 +45,7 @@
       </div>
 
       <div class="card">
-        <h3>👥 CBD population — {{ pop?.region.name }}</h3>
+        <h3>CBD population</h3>
         <p>AAGR: <strong>{{ pop?.averageAnnualGrowthRate?.toFixed(2) }}%</strong></p>
         <ul>
           <li v-for="p in pop?.values" :key="'pop-'+p.year">
