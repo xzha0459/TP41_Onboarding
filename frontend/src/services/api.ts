@@ -27,7 +27,7 @@ export type PredictItem = NearbyItem & {
   predicted_available_probability: number;
 };
 
-// 如果用 Vite 代理，改成：const api = axios.create({ baseURL: "" });
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "",
   timeout: 10000,
