@@ -7,7 +7,6 @@
       <nav class="row" style="gap:14px">
         <router-link to="/find">Find Parking</router-link>
         <router-link to="/insights">Insights</router-link>
-        <router-link to="/trends">Trends</router-link>
         <router-link to="/forecast">Forecast</router-link>
 
       </nav>
