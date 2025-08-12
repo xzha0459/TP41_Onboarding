@@ -24,7 +24,8 @@ body {
   position: relative;
 }
 
-body::before {
+/* 背景图片层 */
+#app::before {
   content: '';
   position: fixed;
   top: 0;
@@ -35,8 +36,6 @@ body::before {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  opacity: 0.4;
-  z-index: -1;
 }
 
 a {
@@ -126,11 +125,11 @@ a {
   color: var(--primary);
 }
 
-/* 导航栏强制白色 - 覆盖所有可能的选择器 */
+/* 导航栏样式 */
 nav, header, .navbar, .nav, .navigation,
 div[class*="nav"], div[class*="header"],
 [class*="top-"], [class*="app-"], [class*="main-"] {
-  background: #ffffff !important;
+  background: rgba(255,255,255,0.95) !important;
   color: #1a1a1a !important;
   border-bottom: 1px solid #e1e5e9;
 }

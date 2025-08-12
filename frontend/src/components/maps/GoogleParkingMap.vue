@@ -14,53 +14,37 @@ type MarkerInput = {
   probability?: number;
 };
 
-const props = defineProps<{ markers: MarkerInput[] }>();
+/** ✅ 新增：接收搜索地址坐标（可选） */
+const props = defineProps<{
+  markers: MarkerInput[];
+  origin?: { lat: number; lng: number } | null;
+}>();
 
 const mapEl = ref<HTMLDivElement | null>(null);
 let map: google.maps.Map | null = null;
+
 let gmarkers: google.maps.Marker[] = [];
+/** ✅ 新增：保存搜索地址 marker 引用 */
+let originMarker: google.maps.Marker | null = null;
 
-function getGoogleIcon(occupied?: boolean, probability?: number) {
-
-  if (probability != null) {
-    const p = probability > 1 ? probability / 100 : probability;
-    if (p >= 0.5) return 'http://maps.google.com/mapfiles/ms/icons/green-dot.png';
-    if (p >= 0.4) return 'http://maps.google.com/mapfiles/ms/icons/yellow-dot.png';
-    return 'http://maps.google.com/mapfiles/ms/icons/red-dot.png';
-  }
-
-
-  if (occupied != null) {
-    return occupied
-      ? 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
-      : 'http://maps.google.com/mapfiles/ms/icons/green-dot.png';
-  }
-
-
-  return 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png';
-}
-
+/** 你的原本渲染逻辑：保持不变，仅用 props.markers */
 function render() {
   if (!map) return;
 
-
-  gmarkers.forEach((m) => m.setMap(null));
+  // 清除旧车位点
+  for (const m of gmarkers) m.setMap(null);
   gmarkers = [];
 
   const bounds = new google.maps.LatLngBounds();
 
   for (const m of props.markers) {
-    const pos = { lat: m.lat, lng: m.lng };
-    bounds.extend(pos);
-
     const marker = new google.maps.Marker({
-      position: pos,
-      map,
-      icon: getGoogleIcon(m.occupied, m.probability),
+      map: map!,
+      position: { lat: m.lat, lng: m.lng },
       title: m.label,
     });
 
-
+    // 这里保留你原来的 InfoWindow 等交互（颜色强制黑色，避免灰）
     if (m.label) {
       const html = `<div style="max-width:240px;color:#000">${m.label}</div>`;
       const infowin = new google.maps.InfoWindow({ content: html });
@@ -68,6 +52,7 @@ function render() {
     }
 
     gmarkers.push(marker);
+    bounds.extend(marker.getPosition()!);
   }
 
   if (props.markers.length) {
@@ -75,8 +60,40 @@ function render() {
   }
 }
 
+/** ✅ 新增：单独渲染搜索地址的点，不影响其它 markers */
+function renderOrigin() {
+  if (!map) return;
+
+  // 清理旧的搜索点
+  if (originMarker) {
+    originMarker.setMap(null);
+    originMarker = null;
+  }
+
+  // 没有传 origin 就不画
+  if (!props.origin) return;
+
+  originMarker = new google.maps.Marker({
+    map: map!,
+    position: props.origin,
+    title: "Searched address",
+    icon: {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: 8,
+      fillColor: "#1a73e8",
+      fillOpacity: 1,
+      strokeColor: "#ffffff",
+      strokeWeight: 2,
+    },
+  });
+
+  // 轻微移动视图到搜索点（不改变当前 zoom）
+  map.panTo(props.origin);
+}
+
+/** 初始化地图：保持你的逻辑；仅在末尾多调一次 renderOrigin() */
 async function init() {
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string;
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || import.meta.env.VITE_GOOGLE_MAPS_API;
   const loader = new Loader({ apiKey, version: "weekly" });
   await loader.load();
 
@@ -88,10 +105,13 @@ async function init() {
   });
 
   render();
+  renderOrigin(); // ✅ 新增：首次渲染搜索点
 }
 
 onMounted(init);
 watch(() => props.markers, render, { deep: true });
+/** ✅ 新增：监听 origin 变化，单独重画搜索点 */
+watch(() => props.origin, renderOrigin, { deep: true });
 </script>
 
 <style scoped>

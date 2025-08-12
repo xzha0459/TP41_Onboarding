@@ -1,20 +1,16 @@
 import axios from "axios";
 
+// ---- axios instance (NEW) ----
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
   timeout: 10000,
 });
 
+// ---- types ----
 export type NearbyInput = {
   address: string;
   max_walk_time?: number; // optional; backend defaults to 5
 };
-
-export type PredictInput = NearbyInput & {
-
-  datetime: string | Date;
-};
-
 
 export type NearbyItem = {
   kerbside_id: string;
@@ -36,6 +32,11 @@ export type NearbyItem = {
 
 export type PredictItem = NearbyItem;
 
+export type PredictInput = NearbyInput & {
+  datetime: string | Date;
+};
+
+// ---- response wrappers (NEW) ----
 export type OriginDTO = {
   latitude: number;
   longitude: number;
@@ -43,16 +44,17 @@ export type OriginDTO = {
   formatted_address: string;
 };
 
-export type NearbyApiResponse = { // NEW
+export type NearbyApiResponse = {
   origin: OriginDTO;
   nearby: NearbyItem[];
 };
 
-export type PredictApiResponse = { // NEW
+export type PredictApiResponse = {
   origin: OriginDTO;
   nearby: PredictItem[];
 };
 
+// ---- helpers ----
 function withOptionalWalk<T extends { address: string; max_walk_time?: number }>(body: T) {
   return {
     address: body.address,
@@ -61,10 +63,11 @@ function withOptionalWalk<T extends { address: string; max_walk_time?: number }>
 }
 
 // ---- APIs ----
+// 维持原返回类型：数组
 export async function fetchNearby(body: NearbyInput): Promise<NearbyItem[]> {
   const payload = withOptionalWalk(body);
-  const { data } = await api.post<NearbyApiResponse>("/parking/nearby", payload);
-  return data.nearby;
+  const { data } = await api.post<NearbyApiResponse>("/parking/nearby", payload); // CHANGED
+  return data.nearby; // CHANGED
 }
 
 export async function fetchNearbyPredict(body: PredictInput): Promise<PredictItem[]> {
@@ -73,10 +76,11 @@ export async function fetchNearbyPredict(body: PredictInput): Promise<PredictIte
     ...withOptionalWalk(others),
     datetime: typeof datetime === "string" ? datetime : datetime.toISOString(),
   };
-  const { data } = await api.post<PredictApiResponse>("/parking/nearby/predict", payload);
-  return data.nearby;
+  const { data } = await api.post<PredictApiResponse>("/parking/nearby/predict", payload); // CHANGED
+  return data.nearby; // CHANGED
 }
 
+// 需要 origin 时用这两个（NEW）
 export async function fetchNearbyWithOrigin(body: NearbyInput): Promise<NearbyApiResponse> {
   const payload = withOptionalWalk(body);
   const { data } = await api.post<NearbyApiResponse>("/parking/nearby", payload);
