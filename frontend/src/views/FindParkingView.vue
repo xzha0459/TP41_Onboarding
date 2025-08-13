@@ -1,13 +1,20 @@
 <template>
   <section class="container">
-    <h1>Find Parking</h1>
-
-    <SearchBar @search="onSearch" />
-
-    <div class="controls">
-      <label>Max walk:
-        <input v-model.number="maxWalk" type="number" min="1" max="30" class="walk-input"> min
-      </label>
+    <div class="page-header">
+      <div class="left-section">
+        <h1>Find Parking</h1>
+        <div class="search-controls">
+          <SearchBar @search="onSearch" />
+          <div class="controls">
+            <label>Max walk:
+              <input v-model.number="maxWalk" type="number" min="1" max="30" class="walk-input"> min
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="right-section">
+        <ParkingLegend class="legend-card" />
+      </div>
     </div>
 
     <GoogleParkingMap :markers="markers" :origin="origin" />
@@ -15,33 +22,83 @@
     <p v-if="loading">Loading…</p>
     <p v-else-if="error" class="error">{{ error }}</p>
 
+    <div v-if="!loading && !error && sortedResults.length" class="main-content">
+      <div class="cards">
+        <article
+          v-for="p in sortedResults"
+          :key="p.kerbside_id"
+          class="card"
+          :class="{ 'selected': selectedParking?.kerbside_id === p.kerbside_id }"
+          @click="showDetails(p)"
+        >
+          <header class="card-head">
+            <span :class="['badge', p.is_occupied ? 'occupied' : 'free']">
+              {{ p.is_occupied ? 'Occupied' : 'Unoccupied' }}
+            </span>
+            <span class="zone">Zone {{ p.zone_number }}</span>
+          </header>
+          <p class="meta">
+            {{ p.distance_km?.toFixed(2) || '0.00' }} km • walk {{ Math.ceil((p.walk_time || 0) * 10) / 10 }} min
+          </p>
+          <p class="desc">{{ p.status_description }}</p>
+          <div class="click-hint">Click for details</div>
+        </article>
+      </div>
 
-    <div v-if="!loading && !error && sortedResults.length" class="cards">
-      <article
-        v-for="p in sortedResults"
-        :key="p.kerbside_id"
-        class="card"
-        @click="showDetails(p)"
-      >
-        <header class="card-head">
-          <span :class="['badge', p.is_occupied ? 'occupied' : 'free']">
-            {{ p.is_occupied ? 'Occupied' : 'Unoccupied' }}
-          </span>
-          <span class="zone">Zone {{ p.zone_number }}</span>
-        </header>
-        <p class="meta">
-           {{ p.distance_km?.toFixed(2) || '0.00' }} km • walk {{ Math.ceil((p.walk_time || 0) * 10) / 10 }} min
-        </p>
-        <p class="desc">{{ p.status_description }}</p>
-        <div class="click-hint">Click for details</div>
-      </article>
+      <div v-if="selectedParking" class="detail-panel">
+        <div class="detail-card">
+          <header class="detail-header">
+            <h3>Parking Details</h3>
+            <button class="close-btn" @click="closeDetails">&times;</button>
+          </header>
+          <div class="detail-content">
+            <div class="detail-row">
+              <span class="label">Status:</span>
+              <span :class="['badge', selectedParking.is_occupied ? 'occupied' : 'free']">
+                {{ selectedParking.is_occupied ? 'Occupied' : 'Unoccupied' }}
+              </span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Zone:</span>
+              <span>{{ selectedParking.zone_number }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Distance:</span>
+              <span>{{ selectedParking.distance_km?.toFixed(2) || '0.00' }} km</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Walk Time:</span>
+              <span>{{ Math.ceil((selectedParking.walk_time || 0) * 10) / 10 }} minutes</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Last Updated:</span>
+              <span>{{ selectedParking.last_updated || 'Not available' }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Description:</span>
+              <span>{{ selectedParking.status_description }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Location:</span>
+              <span>{{ selectedParking.latitude.toFixed(6) }}, {{ selectedParking.longitude.toFixed(6) }}</span>
+            </div>
+          </div>
+          <div class="detail-actions">
+            <button class="btn btn-primary" @click="openInMaps(selectedParking)">
+              Open in Maps
+            </button>
+            <button class="btn btn-secondary" @click="closeDetails">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- 无结果提示 - 与 Forecast 页面一致 -->
+    <!-- 无结果提示 -->
     <p v-if="!loading && !error && searched && !sortedResults.length" class="no-results">
       No parking available in this area...
     </p>
-
 
     <div v-if="selectedParking" class="modal-overlay" @click="closeDetails">
       <div class="modal" @click.stop>
@@ -66,19 +123,19 @@
           </div>
           <div class="detail-row">
             <span class="label">Walk Time:</span>
-            <span>{{ selectedParking.walk_time }} minutes</span>
+            <span>{{ Math.ceil((selectedParking.walk_time || 0) * 10) / 10 }} minutes</span>
           </div>
           <div class="detail-row">
             <span class="label">Last Updated:</span>
             <span>{{ selectedParking.last_updated || 'Not available' }}</span>
           </div>
           <div class="detail-row">
-            <span class="label">Time limit:</span>
-            <span>{{ selectedParking.sign_text }}</span>
+            <span class="label">Description:</span>
+            <span>{{ selectedParking.status_description }}</span>
           </div>
           <div class="detail-row">
             <span class="label">Location:</span>
-            <span>{{ Math.ceil((selectedParking.walk_time || 0) * 10) / 10 }} minutes</span>
+            <span>{{ selectedParking.latitude.toFixed(6) }}, {{ selectedParking.longitude.toFixed(6) }}</span>
           </div>
         </div>
         <div class="modal-actions">
@@ -98,6 +155,7 @@
 import { ref, computed } from "vue";
 import GoogleParkingMap from "@/components/maps/GoogleParkingMap.vue";
 import SearchBar from "@/components/SearchBar.vue";
+import ParkingLegend from "@/components/ParkingLegend.vue"; // 导入ParkingLegend组件
 import { fetchNearbyWithOrigin, type NearbyItem, type OriginDTO } from "@/services/api";
 
 const maxWalk = ref(5);
@@ -135,7 +193,7 @@ const markers = computed(() =>
     lat: p.latitude,
     lng: p.longitude,
     occupied: p.is_occupied,
-    label: `${p.zone_number} • ${p.status_description} • ${p.distance_km?.toFixed(2) || '0.00'} km • ${p.walk_time || 0} min`,
+    label: `${p.zone_number} • ${p.status_description} • ${p.distance_km?.toFixed(2) || '0.00'} km • ${Math.ceil((p.walk_time || 0) * 10) / 10} min`,
   }))
 );
 
@@ -160,13 +218,85 @@ function openInMaps(parking: NearbyItem) {
   padding: 16px;
 }
 
+/* 页面头部布局 */
+.page-header {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 20px;
+  align-items: flex-start;
+}
+
+.left-section {
+  flex: 1;
+  min-width: 0;
+}
+
+.left-section h1 {
+  margin: 0 0 16px 0;
+  font-size: 24px;
+  color: #1a1a1a;
+}
+
+.search-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.right-section {
+  flex: 0 0 320px;
+}
+
+.legend-card {
+  background: #ffffff;
+  border: 1px solid #e1e5e9;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+
+/* 控制区域样式调整 */
 .controls {
-  margin: 12px 0;
+  display: flex;
+  align-items: center;
 }
 
 .controls label {
   color: #6c757d;
   font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 在小屏幕上调整布局 */
+@media (max-width: 968px) {
+  .page-header {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .right-section {
+    flex: none;
+    width: 100%;
+  }
+
+  .legend-card {
+    padding: 14px;
+  }
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+}
+
+.controls label {
+  color: #6c757d;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .walk-input {
@@ -195,7 +325,14 @@ function openInMaps(parking: NearbyItem) {
   font-style: italic;
 }
 
+.main-content {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
 .cards {
+  flex: 1;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 12px;
@@ -216,6 +353,54 @@ function openInMaps(parking: NearbyItem) {
   border-color: #0d6efd;
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0,0,0,.15);
+}
+
+.card.selected {
+  border-color: #0d6efd;
+  background: #f8f9fa;
+  box-shadow: 0 4px 12px rgba(13, 110, 253, 0.2);
+}
+
+.detail-panel {
+  flex: 0 0 400px;
+  position: sticky;
+  top: 20px;
+}
+
+.detail-card {
+  background: #ffffff;
+  border: 1px solid #e1e5e9;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.15);
+  overflow: hidden;
+}
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e1e5e9;
+  background: #f8f9fa;
+}
+
+.detail-header h3 {
+  margin: 0;
+  color: #1a1a1a;
+  font-size: 16px;
+}
+
+.detail-content {
+  padding: 20px;
+}
+
+.detail-actions {
+  padding: 16px 20px;
+  border-top: 1px solid #e1e5e9;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  background: #f8f9fa;
 }
 
 .card-head {
@@ -309,11 +494,11 @@ function openInMaps(parking: NearbyItem) {
   background: none;
   border: none;
   color: #6c757d;
-  font-size: 24px;
+  font-size: 20px;
   cursor: pointer;
   padding: 0;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -321,7 +506,7 @@ function openInMaps(parking: NearbyItem) {
 }
 
 .close-btn:hover {
-  background: #f8f9fa;
+  background: #e9ecef;
   color: #1a1a1a;
 }
 
