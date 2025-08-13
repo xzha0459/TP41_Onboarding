@@ -10,7 +10,6 @@
       </label>
     </div>
 
-    <!-- NEW: 仅新增 origin 透传，不改原有 markers 逻辑 -->
     <GoogleParkingMap :markers="markers" :origin="origin" />
 
     <p v-if="loading">Loading…</p>
@@ -31,7 +30,7 @@
           <span class="zone">Zone {{ p.zone_number }}</span>
         </header>
         <p class="meta">
-          {{ p.distance_km?.toFixed(2) ?? '--' }} km • walk {{ p.walk_time ?? '--' }} min
+           {{ p.distance_km?.toFixed(2) || '0.00' }} km • walk {{ Math.ceil((p.walk_time || 0) * 10) / 10 }} min
         </p>
         <p class="desc">{{ p.status_description }}</p>
         <div class="click-hint">Click for details</div>
@@ -63,7 +62,7 @@
           </div>
           <div class="detail-row">
             <span class="label">Distance:</span>
-            <span>{{ selectedParking?.distance_km?.toFixed(2) ?? '--' }} km</span>
+            <span>{{ selectedParking.distance_km?.toFixed(2) }} km</span>
           </div>
           <div class="detail-row">
             <span class="label">Walk Time:</span>
@@ -74,12 +73,12 @@
             <span>{{ selectedParking.last_updated || 'Not available' }}</span>
           </div>
           <div class="detail-row">
-            <span class="label">Description:</span>
-            <span>{{ selectedParking.status_description }}</span>
+            <span class="label">Time limit:</span>
+            <span>{{ selectedParking.sign_text }}</span>
           </div>
           <div class="detail-row">
             <span class="label">Location:</span>
-            <span>{{ selectedParking.latitude.toFixed(6) }}, {{ selectedParking.longitude.toFixed(6) }}</span>
+            <span>{{ Math.ceil((selectedParking.walk_time || 0) * 10) / 10 }} minutes</span>
           </div>
         </div>
         <div class="modal-actions">
@@ -99,8 +98,7 @@
 import { ref, computed } from "vue";
 import GoogleParkingMap from "@/components/maps/GoogleParkingMap.vue";
 import SearchBar from "@/components/SearchBar.vue";
-// NEW: 仅追加 fetchNearbyWithOrigin（原有 fetchNearby 不变）
-import { fetchNearby, fetchNearbyWithOrigin, type NearbyItem } from "@/services/api";
+import { fetchNearbyWithOrigin, type NearbyItem, type OriginDTO } from "@/services/api";
 
 const maxWalk = ref(5);
 const loading = ref(false);
@@ -108,8 +106,7 @@ const error = ref("");
 const searched = ref(false);
 const results = ref<NearbyItem[]>([]);
 const selectedParking = ref<NearbyItem | null>(null);
-// NEW: 新增搜索地址坐标（只用于在地图上显示一个点）
-const origin = ref<{ lat: number; lng: number } | null>(null);
+const origin = ref<OriginDTO | null>(null);
 
 async function onSearch(address: string) {
   loading.value = true;
@@ -119,18 +116,9 @@ async function onSearch(address: string) {
   try {
     const body: any = { address };
     if (maxWalk.value !== 5) body.max_walk_time = maxWalk.value;
-
-    // 保持原有逻辑：先拿附近停车位数组
-    results.value = await fetchNearby(body);
-
-    // NEW: 额外拿一次 origin 坐标（不影响上面的结果/交互）
-    try {
-      const full = await fetchNearbyWithOrigin(body);
-      origin.value = { lat: full.origin.latitude, lng: full.origin.longitude };
-    } catch {
-      // 忽略 origin 获取失败，不影响主功能
-      origin.value = null;
-    }
+    const response = await fetchNearbyWithOrigin(body);
+    results.value = response.nearby;
+    origin.value = response.origin;
   } catch (err: any) {
     error.value = err?.response?.data || err?.message || "Request failed";
   } finally {
@@ -139,9 +127,7 @@ async function onSearch(address: string) {
 }
 
 const sortedResults = computed(() =>
-  [...results.value].sort(
-  (a, b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity)
-)
+  [...results.value].sort((a, b) => (a.distance_km || 0) - (b.distance_km || 0))
 );
 
 const markers = computed(() =>
@@ -149,7 +135,7 @@ const markers = computed(() =>
     lat: p.latitude,
     lng: p.longitude,
     occupied: p.is_occupied,
-    label: `${p.zone_number} • ${p.status_description} • ${(p.distance_km?.toFixed(2) ?? '--')} km • ${(p.walk_time ?? '--')} min`,
+    label: `${p.zone_number} • ${p.status_description} • ${p.distance_km?.toFixed(2) || '0.00'} km • ${p.walk_time || 0} min`,
   }))
 );
 
