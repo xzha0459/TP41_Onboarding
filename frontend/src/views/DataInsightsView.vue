@@ -21,6 +21,9 @@
         <div v-if="popAagr != null" class="meta">
           Average Annual Growth: {{ popAagr.toFixed(2) }}%
         </div>
+        <p class="note">
+          Description: This chart tracks resident population in <strong>Melbourne CBD (2001–2021)</strong>. It shows a steady, long-term rise; the average annual growth over this period is about <span class="highlight">0.31%</span>.
+        </p>
       </div>
 
       <!-- Card 2: Car Ownership -->
@@ -30,6 +33,9 @@
         <div class="meta" v-if="carAagr != null">
           Average Annual Growth: {{ carAagr.toFixed(2) }}%
         </div>
+        <p class="note">
+          Description: This chart shows the total number of registered vehicles for the available years 2016, 2020 and 2021. The trend is upward, with an average annual growth of about <span class="highlight">1.95%</span> (note the limited time points).
+        </p>
       </div>
     </div>
   </Section>
@@ -178,4 +184,5 @@ onBeforeUnmount(destroyCharts);
 .chart{height:300px} /* 给 canvas 一个实际高度 */
 .meta{font-size:.85rem; opacity:.8; margin-top:.5rem}
 .note{font-size:.85rem; margin-top:.25rem; opacity:.9}
+.highlight{font-weight:700; color:#0d6efd; background:#e7f1ff; padding:0 .25rem; border-radius:4px}
 </style>

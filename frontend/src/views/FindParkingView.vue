@@ -19,6 +19,11 @@
 
     <GoogleParkingMap :markers="markers" :origin="origin" />
 
+    <div v-if="loading" class="map-loading-overlay">
+      <div class="loading-spinner"></div>
+      <span>Searching for parking...</span>
+    </div>
+
     <p v-if="loading">Loading…</p>
     <p v-else-if="error" class="error">{{ error }}</p>
 
@@ -45,54 +50,56 @@
         </article>
       </div>
 
-      <div v-if="selectedParking" class="detail-panel">
-        <div class="detail-card">
-          <header class="detail-header">
-            <h3>Parking Details</h3>
-            <button class="close-btn" @click="closeDetails">&times;</button>
-          </header>
-          <div class="detail-content">
-            <div class="detail-row">
-              <span class="label">Status:</span>
-              <span :class="['badge', selectedParking.is_occupied ? 'occupied' : 'free']">
-                {{ selectedParking.is_occupied ? 'Occupied' : 'Unoccupied' }}
-              </span>
+      <teleport to="body">
+        <div v-if="selectedParking" class="modal-overlay" @click="closeDetails">
+          <div class="modal" @click.stop>
+            <header class="modal-header">
+              <h3>Parking Details</h3>
+              <button class="close-btn" @click="closeDetails">&times;</button>
+            </header>
+            <div class="modal-content">
+              <div class="detail-row">
+                <span class="label">Status:</span>
+                <span :class="['badge', selectedParking.is_occupied ? 'occupied' : 'free']">
+                  {{ selectedParking.is_occupied ? 'Occupied' : 'Unoccupied' }}
+                </span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Zone:</span>
+                <span>{{ selectedParking.zone_number }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Distance:</span>
+                <span>{{ selectedParking.distance_km?.toFixed(2) || '0.00' }} km</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Walk Time:</span>
+                <span>{{ Math.ceil((selectedParking.walk_time || 0) * 10) / 10 }} minutes</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Last Updated:</span>
+                <span>{{ selectedParking.last_updated || 'Not available' }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Description:</span>
+                <span>{{ selectedParking.sign_text }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Location:</span>
+                <span>{{ selectedParking.latitude.toFixed(6) }}, {{ selectedParking.longitude.toFixed(6) }}</span>
+              </div>
             </div>
-            <div class="detail-row">
-              <span class="label">Zone:</span>
-              <span>{{ selectedParking.zone_number }}</span>
+            <div class="modal-actions">
+              <button class="btn btn-primary" @click="openInMaps(selectedParking)">
+                Open in Maps
+              </button>
+              <button class="btn btn-secondary" @click="closeDetails">
+                Close
+              </button>
             </div>
-            <div class="detail-row">
-              <span class="label">Distance:</span>
-              <span>{{ selectedParking.distance_km?.toFixed(2) || '0.00' }} km</span>
-            </div>
-            <div class="detail-row">
-              <span class="label">Walk Time:</span>
-              <span>{{ Math.ceil((selectedParking.walk_time || 0) * 10) / 10 }} minutes</span>
-            </div>
-            <div class="detail-row">
-              <span class="label">Last Updated:</span>
-              <span>{{ selectedParking.last_updated || 'Not available' }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="label">Description:</span>
-              <span>{{ selectedParking.status_description }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="label">Location:</span>
-              <span>{{ selectedParking.latitude.toFixed(6) }}, {{ selectedParking.longitude.toFixed(6) }}</span>
-            </div>
-          </div>
-          <div class="detail-actions">
-            <button class="btn btn-primary" @click="openInMaps(selectedParking)">
-              Open in Maps
-            </button>
-            <button class="btn btn-secondary" @click="closeDetails">
-              Close
-            </button>
           </div>
         </div>
-      </div>
+      </teleport>
     </div>
 
     <!-- 无结果提示 -->
@@ -100,54 +107,6 @@
       No parking available in this area...
     </p>
 
-    <div v-if="selectedParking" class="modal-overlay" @click="closeDetails">
-      <div class="modal" @click.stop>
-        <header class="modal-header">
-          <h3>Parking Details</h3>
-          <button class="close-btn" @click="closeDetails">&times;</button>
-        </header>
-        <div class="modal-content">
-          <div class="detail-row">
-            <span class="label">Status:</span>
-            <span :class="['badge', selectedParking.is_occupied ? 'occupied' : 'free']">
-              {{ selectedParking.is_occupied ? 'Occupied' : 'Unoccupied' }}
-            </span>
-          </div>
-          <div class="detail-row">
-            <span class="label">Zone:</span>
-            <span>{{ selectedParking.zone_number }}</span>
-          </div>
-          <div class="detail-row">
-            <span class="label">Distance:</span>
-            <span>{{ selectedParking.distance_km?.toFixed(2) }} km</span>
-          </div>
-          <div class="detail-row">
-            <span class="label">Walk Time:</span>
-            <span>{{ Math.ceil((selectedParking.walk_time || 0) * 10) / 10 }} minutes</span>
-          </div>
-          <div class="detail-row">
-            <span class="label">Last Updated:</span>
-            <span>{{ selectedParking.last_updated || 'Not available' }}</span>
-          </div>
-          <div class="detail-row">
-            <span class="label">Description:</span>
-            <span>{{ selectedParking.status_description }}</span>
-          </div>
-          <div class="detail-row">
-            <span class="label">Location:</span>
-            <span>{{ selectedParking.latitude.toFixed(6) }}, {{ selectedParking.longitude.toFixed(6) }}</span>
-          </div>
-        </div>
-        <div class="modal-actions">
-          <button class="btn btn-primary" @click="openInMaps(selectedParking)">
-            Open in Maps
-          </button>
-          <button class="btn btn-secondary" @click="closeDetails">
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
   </section>
 </template>
 
@@ -199,10 +158,16 @@ const markers = computed(() =>
 
 function showDetails(parking: NearbyItem) {
   selectedParking.value = parking;
+  try {
+    document.body.style.overflow = 'hidden';
+  } catch {}
 }
 
 function closeDetails() {
   selectedParking.value = null;
+  try {
+    document.body.style.overflow = '';
+  } catch {}
 }
 
 function openInMaps(parking: NearbyItem) {
@@ -323,6 +288,8 @@ function openInMaps(parking: NearbyItem) {
   text-align: center;
   margin: 20px 0;
   font-style: italic;
+  font-size: 20px;
+  font-weight: 700;
 }
 
 .main-content {
@@ -361,21 +328,32 @@ function openInMaps(parking: NearbyItem) {
   box-shadow: 0 4px 12px rgba(13, 110, 253, 0.2);
 }
 
-.detail-panel {
-  flex: 0 0 400px;
-  position: sticky;
-  top: 20px;
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
 }
 
-.detail-card {
+.modal {
   background: #ffffff;
-  border: 1px solid #e1e5e9;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,.15);
-  overflow: hidden;
+  max-width: 520px;
+  width: 92%;
+  max-height: 80vh;
+  overflow-y: auto;
+  border: 1px solid #e1e5e9;
+  box-shadow: 0 10px 25px rgba(0,0,0,.15);
 }
 
-.detail-header {
+.modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -384,17 +362,17 @@ function openInMaps(parking: NearbyItem) {
   background: #f8f9fa;
 }
 
-.detail-header h3 {
+.modal-header h3 {
   margin: 0;
   color: #1a1a1a;
   font-size: 16px;
 }
 
-.detail-content {
+.modal-content {
   padding: 20px;
 }
 
-.detail-actions {
+.modal-actions {
   padding: 16px 20px;
   border-top: 1px solid #e1e5e9;
   display: flex;
@@ -453,116 +431,84 @@ function openInMaps(parking: NearbyItem) {
   margin-top: 8px;
 }
 
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal {
-  background: #ffffff;
+/* Map loading overlay */
+.map-loading-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 12px;
-  max-width: 500px;
-  width: 90%;
-  max-height: 80vh;
-  overflow-y: auto;
-  border: 1px solid #e1e5e9;
-  box-shadow: 0 10px 25px rgba(0,0,0,.15);
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid #e1e5e9;
-}
-
-.modal-header h3 {
-  margin: 0;
-  color: #1a1a1a;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  color: #6c757d;
-  font-size: 20px;
-  cursor: pointer;
-  padding: 0;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.close-btn:hover {
-  background: #e9ecef;
-  color: #1a1a1a;
-}
-
-.modal-content {
   padding: 20px;
-}
-
-.detail-row {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #f8f9fa;
-}
-
-.detail-row:last-child {
-  border-bottom: none;
-}
-
-.label {
-  font-weight: 600;
-  color: #6c757d;
-  min-width: 100px;
-}
-
-.modal-actions {
-  padding: 16px 20px;
-  border-top: 1px solid #e1e5e9;
-  display: flex;
   gap: 12px;
-  justify-content: flex-end;
+  z-index: 100;
 }
 
-.btn-primary {
-  background: #0d6efd;
-  color: white;
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e5e7eb;
+  border-top: 3px solid #0d6efd;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
-.btn-primary:hover {
-  background: #0b5ed7;
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
-.btn-secondary {
-  background: #6c757d;
-  color: white;
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
+.map-loading-overlay span {
+  color: #6c757d;
+  font-size: 14px;
+  font-weight: 500;
 }
 
-.btn-secondary:hover {
-  background: #5c636a;
-}
-</style>
+ .detail-row {
+   display: flex;
+   justify-content: space-between;
+   align-items: center;
+   padding: 8px 0;
+   border-bottom: 1px solid #f8f9fa;
+ }
+
+ .detail-row:last-child {
+   border-bottom: none;
+ }
+
+ .label {
+   font-weight: 600;
+   color: #6c757d;
+   min-width: 100px;
+ }
+
+ .btn-primary {
+   background: #0d6efd;
+   color: white;
+   padding: 8px 16px;
+   border: none;
+   border-radius: 6px;
+   cursor: pointer;
+ }
+
+ .btn-primary:hover {
+   background: #0b5ed7;
+ }
+
+ .btn-secondary {
+   background: #6c757d;
+   color: white;
+   padding: 8px 16px;
+   border: none;
+   border-radius: 6px;
+   cursor: pointer;
+ }
+
+ .btn-secondary:hover {
+   background: #5c636a;
+ }
+ </style>

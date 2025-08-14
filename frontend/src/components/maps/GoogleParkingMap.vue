@@ -74,10 +74,7 @@ function render() {
     originMarker = new google.maps.Marker({
       position: originPos,
       map,
-      icon: {
-        url: 'http://maps.google.com/mapfiles/ms/icons/blue-pushpin.png',
-        scaledSize: new google.maps.Size(32, 32),
-      },
+      icon: 'http://maps.google.com/mapfiles/ms/icons/purple-dot.png',
       title: props.origin.formatted_address || props.origin.address,
       zIndex: 1000, // Make sure origin marker is on top
     });
