@@ -170,7 +170,7 @@ onBeforeUnmount(destroyCharts);
 }
 .controls label{display:flex; flex-direction:column; gap:.25rem}
 .controls input{border:1px solid #e5e7eb; border-radius:8px; padding:.4rem .6rem; width:8rem}
-.controls button{padding:.46rem .9rem; border-radius:8px; background:black; color:#fff}
+.controls button{padding:.46rem .9rem; border-radius:8px; background:white; color:black; border:1px solid #e5e7eb}
 .err{color:#b91c1c; font-size:.9rem}
 
 /* 上下布局（永远一列） */
